@@ -1,27 +1,37 @@
+# Standard library imports
+import pathlib
+import time
+from typing import Optional, Union
+
+# Third-party library imports
 import cv2
 import numpy as np
-import torch
-import time
-import serial
 import pyrealsense2 as rs
-import pathlib
-from models.common import DetectMultiBackend, AutoShape
-from utils.torch_utils import select_device
-from utils.augmentations import letterbox
+import serial
+import torch
 from PIL import Image
+from torch import device as torch_device
+
+# Local imports
+from models.common import AutoShape, DetectMultiBackend
+from utils.augmentations import letterbox
+from utils.torch_utils import select_device
+
 
 class ModelLoader:
-    def __init__(self, weights_path, device=None):
+    def __init__(self, weights_path: str, device: Optional[Union[str, torch_device]] = None) -> None:
         self.weights = weights_path
-        self.device = select_device(device) if device is None else device
-        self.model = None
+        self.device: torch_device = select_device(device) if device is None else device
+        self.model: Optional[AutoShape] = None
         
-    def load_model(self):
+    def load_model(self) -> None:
         self.model = DetectMultiBackend(self.weights, device=self.device, dnn=False, data=None)
         self.model = AutoShape(self.model)
         self.model.eval()
         
-    def warm_up(self):
+    def warm_up(self) -> None:
+        if self.model is None:
+            raise ValueError("Model must be loaded before warm up")
         with torch.no_grad():
             dummy_input = torch.zeros((1, 3, 640, 480)).to(self.device)
             for _ in range(2):
@@ -54,7 +64,7 @@ class RealSenseCamera:
         self.pipeline.stop()
 
 class ObjectDetector:
-    def __init__(self, model, category_names):
+    def __init__(self, model: AutoShape, category_names):
         self.model = model
         self.category_names = category_names
         self.FOV_HORIZONTAL = 87
@@ -146,12 +156,26 @@ class RobotController:
 def main():
     # Fix for WindowsPath
     pathlib.WindowsPath = pathlib.PosixPath
+
+    # Model Setting
+    WEIGHTS_PATH = './runs/train/exp/weights/best.pt'
+    MODEL_CONFIDENCE = 0.25 # Default NMS confidence threshold
+    MODEL_IOU = 0.45 # NMS IoU threshold
+
+    CATEGORY_NAMES = ['ai', 'awear', 'imr', 'gist']
+
+    # Serial Setting
+    PORT = '/dev/ttyACM0'
+    BAUDRATE = 57600
+
     
     # Initialize components
     start_time = time.time()
-    
-    model_loader = ModelLoader('./runs/train/exp/weights/best.pt')
+
+    model_loader = ModelLoader(WEIGHTS_PATH)
     model_loader.load_model()
+    model_loader.model.conf = MODEL_CONFIDENCE
+    model_loader.model.iou = MODEL_IOU
     model_loader.warm_up()
     print(f"{time.time()-start_time:.3f}s Model loaded and warmed up")
     
@@ -159,10 +183,8 @@ def main():
     camera.setup()
     print(f"{time.time()-start_time:.3f}s Camera initialized")
     
-    category_names = ['ai', 'awear', 'imr', 'gist']
-    detector = ObjectDetector(model_loader.model, category_names)
-    
-    robot = RobotController()
+    detector = ObjectDetector(model_loader.model, CATEGORY_NAMES)
+    robot = RobotController(port=PORT, baudrate=BAUDRATE)
     visualizer = Visualizer()
     
     print(f"{time.time()-start_time:.3f}s Starting detection loop")
