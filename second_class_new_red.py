@@ -156,6 +156,8 @@ class RobotController:
         self.state = 0
     
     def isWithinTargetRange(self, detection, distance):
+        if detection["depth"] == 0:
+            return False
         if detection["depth"] < distance:
             return True
         else:
@@ -306,6 +308,7 @@ def main():
             robot.send_command_with_wait('w')
         print(f"{time.time()-start_time:.3f}s Forward Complete.")
 
+        robot.send_command_with_wait('x')
         robot.send_command_with_wait('x')
         print(f"{time.time()-start_time:.3f}s Backward Complete.")
 
