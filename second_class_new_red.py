@@ -315,6 +315,7 @@ def main():
         # Step 3-1 search assistant
         robot.send_command_with_wait('a')
         robot.send_command_with_wait('a')
+        robot.send_command_with_wait('a')
         robot.send_command_with_wait('w')
         robot.send_command_with_wait('w')
 
@@ -372,11 +373,8 @@ def main():
         print(f"{time.time()-start_time:.3f}s Navigate Yolo Object Complete.")
 
         # Step 6 : ForwardGoal(Goal)
-        robot.send_command_with_wait('w')
-        robot.send_command_with_wait('w')
-        robot.send_command_with_wait('w')
-        robot.send_command_with_wait('w')
-        robot.send_command_with_wait('w')
+        while True:
+            robot.send_command_with_wait('w')
 
     # Cleanup
     cv2.destroyAllWindows()
