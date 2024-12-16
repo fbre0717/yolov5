@@ -154,7 +154,12 @@ class RobotController:
     def __init__(self, port='/dev/ttyACM0', baudrate=57600):
         self.serial = serial.Serial(port=port, baudrate=baudrate)
         self.state = 0
-        self.isWithinTargetRange = False
+    
+    def isWithinTargetRange(self, detection, distance):
+        if detection["depth"] < distance:
+            return True
+        else:
+            return False
         
     def process_detection(self, detection):
         angle = detection['angle']
@@ -256,25 +261,55 @@ def main():
         print(f"{time.time()-start_time:.3f}s Rotate Complete.")
 
         # Step 2 : navigateToTarget(Red)
-        robot.isWithinTargetRange = False
+        angle_limit = 30
+        distance_limit = 0.5
         while True:
             color_image, depth_image = camera.get_frames()
-            detections_red = detector.detect_red(color_image, depth_image)
-            
-            if detections_red:
-                color_image = visualizer.draw_detections(color_image, detections_red)
-                closest_detection = min(detections_red, key=lambda x: x['depth'])
-                robot.process_detection(closest_detection)
-
-            if robot.isWithinTargetRange:
-                break
-            
             cv2.imshow("Color Image", color_image)
-            
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
-        print(f"{time.time()-start_time:.3f}s Rotate Complete.")
+            detections_red = detector.detect_red(color_image, depth_image)
+            if detections_red:
+                color_image = visualizer.draw_detections(color_image, detections_red)
+                closest_detection = min(detections_red, key=lambda x: x['depth'])
+
+                if closest_detection["angle"] > angle_limit:
+                    command = 'd'
+                elif closest_detection["angle"] < -angle_limit:
+                    command = 'a'
+                else:
+                    command = 'w'
+                
+                robot.send_command_with_wait(command)
+
+                if robot.isWithinTargetRange(closest_detection, distance_limit):
+                    break
+            else:
+                print("Can't find Red Object")
+                
+        print(f"{time.time()-start_time:.3f}s Navigate Red Object Complete.")
+
+
+        # robot.isWithinTargetRange = False
+        # while True:
+        #     color_image, depth_image = camera.get_frames()
+        #     detections_red = detector.detect_red(color_image, depth_image)
+            
+        #     if detections_red:
+        #         color_image = visualizer.draw_detections(color_image, detections_red)
+        #         closest_detection = min(detections_red, key=lambda x: x['depth'])
+        #         robot.process_detection(closest_detection)
+
+        #     if robot.isWithinTargetRange:
+        #         break
+            
+        #     cv2.imshow("Color Image", color_image)
+            
+        #     if cv2.waitKey(1) & 0xFF == ord('q'):
+        #         break
+
+        # print(f"{time.time()-start_time:.3f}s Rotate Complete.")
 
         # Step 3 : moveForwardBackward
         robot.send_command_with_wait('w')
@@ -297,3 +332,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# 3. navigateToTarget(Red)
+#     1. isTargetDetected
+#     2. isTargetAngleExceeded
+#         1. sendCommand(A/D)
+#         2. sendCommand(W)
+#     3. hasReceivedCommandComplete(command)
+#     4. **isWithinTargetRange**
