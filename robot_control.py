@@ -1,6 +1,7 @@
 import serial
 import time
 import pathlib
+import cv2
 
 from third_class import ModelLoader, RealSenseCamera, ObjectDetector, Visualizer
 
@@ -57,11 +58,21 @@ class RobotController:
         color_image, depth_image = self.camera.get_frames()
         detections = self.detector.detect(color_image, depth_image)
         
+        # Visualize detections
+        visualized_image = self.visualizer.draw_detections(color_image.copy(), detections)
+        
+        # Display the image
+        cv2.imshow('Detections', visualized_image)
+        cv2.waitKey(1)  # Update window and wait 1ms
+        
         if self.isTargetDetected(target, detections):
             if self.isTargetRight(target, detections):
                 self.setDirection('R')
             else:
                 self.setDirection('L')
+
+    def __del__(self):
+        cv2.destroyAllWindows()
 
 
     def navigateToTarget(self, target):
