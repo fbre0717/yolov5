@@ -306,9 +306,14 @@ def main():
             robot.send_command_with_wait('w')
         print(f"{time.time()-start_time:.3f}s Forward Complete.")
 
-        for _ in range(step):
-            robot.send_command_with_wait('x')
+        robot.send_command_with_wait('x')
         print(f"{time.time()-start_time:.3f}s Backward Complete.")
+
+        # Step 3-1 search assistant
+        robot.send_command_with_wait('a')
+        robot.send_command_with_wait('a')
+        robot.send_command_with_wait('w')
+        robot.send_command_with_wait('w')
 
         # Step 4 : searchTarget
         while True:
@@ -358,9 +363,17 @@ def main():
                 if robot.isWithinTargetRange(closest_detection, distance_limit):
                     break
             else:
-                print("Can't find Yolo Object")
+                print("Can't find yolo object, rotate left")
+                robot.send_command_with_wait('a')
 
         print(f"{time.time()-start_time:.3f}s Navigate Yolo Object Complete.")
+
+        # Step 6 : ForwardGoal(Goal)
+        robot.send_command_with_wait('w')
+        robot.send_command_with_wait('w')
+        robot.send_command_with_wait('w')
+        robot.send_command_with_wait('w')
+        robot.send_command_with_wait('w')
 
     # Cleanup
     cv2.destroyAllWindows()
