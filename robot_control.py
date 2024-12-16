@@ -58,12 +58,10 @@ class RobotController:
         color_image, depth_image = self.camera.get_frames()
         detections = self.detector.detect(color_image, depth_image)
         
-        # Visualize detections
         visualized_image = self.visualizer.draw_detections(color_image.copy(), detections)
-        
-        # Display the image
         cv2.imshow('Detections', visualized_image)
-        cv2.waitKey(1)  # Update window and wait 1ms
+        cv2.waitKey(0)  # 0으로 설정하면 키 입력까지 대기
+        cv2.destroyAllWindows()
         
         if self.isTargetDetected(target, detections):
             if self.isTargetRight(target, detections):
