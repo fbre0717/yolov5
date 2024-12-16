@@ -193,7 +193,7 @@ class RobotController:
         if self.serial.in_waiting:
             response = self.serial.readline().decode('utf-8').strip()
             print("Serial reponse is", response)
-            return response == f"{command}_COMPLETE"
+            return response == f"Completed: {command}"
                 
         return False
 
