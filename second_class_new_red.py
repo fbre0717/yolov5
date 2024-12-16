@@ -251,9 +251,12 @@ def main():
     # Start
     print(f"{time.time()-start_time:.3f}s Please insert any key.")
     input()
+    start_time = time.time()
 
     
     # Main loop
+    DEBUG_MODE = False  # 전역 변수로 설정
+
     with torch.no_grad():
         # Step 1 : initializeDirection = Rotation
         robot.send_command_with_wait('a')
@@ -265,14 +268,20 @@ def main():
         distance_limit = 0.5
         while True:
             color_image, depth_image = camera.get_frames()
-            cv2.imshow("Color Image", color_image)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
 
+            if DEBUG_MODE:
+                cv2.imshow("Color Image", color_image)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
+            print(f"{time.time()-start_time:.3f}s detect_red start.")
             detections_red = detector.detect_red(color_image, depth_image)
+            print(f"{time.time()-start_time:.3f}s detect_red end.")
+
             if detections_red:
                 color_image = visualizer.draw_detections(color_image, detections_red)
                 closest_detection = min(detections_red, key=lambda x: x['depth'])
+                print("closest detection :", closest_detection['depth'])
 
                 if closest_detection["angle"] > angle_limit:
                     command = 'd'
@@ -287,44 +296,71 @@ def main():
                     break
             else:
                 print("Can't find Red Object")
-                
+
         print(f"{time.time()-start_time:.3f}s Navigate Red Object Complete.")
 
-
-        # robot.isWithinTargetRange = False
-        # while True:
-        #     color_image, depth_image = camera.get_frames()
-        #     detections_red = detector.detect_red(color_image, depth_image)
-            
-        #     if detections_red:
-        #         color_image = visualizer.draw_detections(color_image, detections_red)
-        #         closest_detection = min(detections_red, key=lambda x: x['depth'])
-        #         robot.process_detection(closest_detection)
-
-        #     if robot.isWithinTargetRange:
-        #         break
-            
-        #     cv2.imshow("Color Image", color_image)
-            
-        #     if cv2.waitKey(1) & 0xFF == ord('q'):
-        #         break
-
-        # print(f"{time.time()-start_time:.3f}s Rotate Complete.")
-
         # Step 3 : moveForwardBackward
-        robot.send_command_with_wait('w')
-        robot.send_command_with_wait('w')
-        robot.send_command_with_wait('w')
+        step = 3
+
+        for _ in range(step):
+            robot.send_command_with_wait('w')
         print(f"{time.time()-start_time:.3f}s Forward Complete.")
-        robot.send_command_with_wait('x')
-        robot.send_command_with_wait('x')
-        robot.send_command_with_wait('x')
+
+        for _ in range(step):
+            robot.send_command_with_wait('x')
         print(f"{time.time()-start_time:.3f}s Backward Complete.")
 
         # Step 4 : searchTarget
+        while True:
+            color_image, depth_image = camera.get_frames()
+            print(f"{time.time()-start_time:.3f}s detect_yolo start.")
+            detections_yolo = detector.detect_yolo(color_image, depth_image)
+            print(f"{time.time()-start_time:.3f}s detect_yolo end.")
 
+            if detections_yolo:
+                color_image = visualizer.draw_detections(color_image, detections_yolo)
+                print("Find yolo object")
+                break
+            else:
+                print("Can't find yolo object, rotate left")
+                robot.send_command_with_wait('a')
+        print(f"{time.time()-start_time:.3f}s Search target Complete.")
 
         # Step 5 : navigateToTarget(Goal)
+        angle_limit = 30
+        distance_limit = 0.5
+        while True:
+            color_image, depth_image = camera.get_frames()
+
+            if DEBUG_MODE:
+                cv2.imshow("Color Image", color_image)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
+            print(f"{time.time()-start_time:.3f}s detect_yolo start.")
+            detections_yolo = detector.detect_yolo(color_image, depth_image)
+            print(f"{time.time()-start_time:.3f}s detect_yolo end.")
+
+            if detections_yolo:
+                color_image = visualizer.draw_detections(color_image, detections_yolo)
+                closest_detection = min(detections_yolo, key=lambda x: x['depth'])
+                print("closest detection :", closest_detection['depth'])
+
+                if closest_detection["angle"] > angle_limit:
+                    command = 'd'
+                elif closest_detection["angle"] < -angle_limit:
+                    command = 'a'
+                else:
+                    command = 'w'
+                
+                robot.send_command_with_wait(command)
+
+                if robot.isWithinTargetRange(closest_detection, distance_limit):
+                    break
+            else:
+                print("Can't find Yolo Object")
+
+        print(f"{time.time()-start_time:.3f}s Navigate Yolo Object Complete.")
 
     # Cleanup
     cv2.destroyAllWindows()
