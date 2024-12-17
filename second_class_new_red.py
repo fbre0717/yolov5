@@ -369,8 +369,8 @@ def main():
                 if robot.isWithinTargetRange(closest_detection, distance_limit):
                     break
             else:
-                print("Can't find yolo object, rotate left")
-                robot.send_command_with_wait('a')
+                print("Can't find yolo object, rotate right")
+                robot.send_command_with_wait('d')
 
         print(f"{time.time()-start_time:.3f}s Navigate Yolo Object Complete.")
 
