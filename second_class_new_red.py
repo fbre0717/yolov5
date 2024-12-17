@@ -318,6 +318,8 @@ def main():
         robot.send_command_with_wait('a')
         robot.send_command_with_wait('w')
         robot.send_command_with_wait('w')
+        robot.send_command_with_wait('w')
+        robot.send_command_with_wait('w')
 
         # Step 4 : searchTarget
         while True:
