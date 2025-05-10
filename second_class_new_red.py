@@ -162,29 +162,7 @@ class RobotController:
             return True
         else:
             return False
-        
-    def process_detection(self, detection):
-        angle = detection['angle']
-        command = None
-        
-        if self.state == 1:
-            if abs(angle) < 20:
-                command = 'w'
-                self.state = 2
-        elif self.state == 2:
-            if angle >= 25:
-                command = 'sd'
-                self.state = 1
-            elif angle <= -25:
-                command = 'sa'
-                self.state = 1
-                
-        if command:
-            self.send_command(command)
-            print(f"angle: {angle}, current state: {self.state}, serial command: {command}")
-            
-        return command
-    
+
     def send_command(self, command):
         if self.serial:
             self.serial.write(command.encode('utf-8'))
@@ -312,7 +290,7 @@ def main():
         robot.send_command_with_wait('x')
         print(f"{time.time()-start_time:.3f}s Backward Complete.")
 
-        # Step 3-1 search assistant
+        # Step 3-1 locate adjust
         robot.send_command_with_wait('a')
         robot.send_command_with_wait('a')
         robot.send_command_with_wait('a')
@@ -384,12 +362,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# 3. navigateToTarget(Red)
-#     1. isTargetDetected
-#     2. isTargetAngleExceeded
-#         1. sendCommand(A/D)
-#         2. sendCommand(W)
-#     3. hasReceivedCommandComplete(command)
-#     4. **isWithinTargetRange**
